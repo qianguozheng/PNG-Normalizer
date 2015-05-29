@@ -61,12 +61,19 @@ def getNormalizedPNG(filename):
             width = unpack(">L", chunkData[0:4])[0]
             height = unpack(">L", chunkData[4:8])[0]
 
+		
         # Parsing the image chunk
         if chunkType == "IDAT":
             try:
                 # Uncompressing the image chunk
                 bufSize = width * height * 4 + height
+                file = open("rawdata", "wb")
+                file.write(chunkData)
+                file.close()
                 chunkData = decompress( chunkData, -8, bufSize)
+                file = open("decompress", "wb")
+                file.write(chunkData)
+                file.close()
                 print chunkData
             except Exception, e:
                 # The PNG image is normalized
@@ -77,33 +84,46 @@ def getNormalizedPNG(filename):
             newdata = ""
 		
             for y in xrange(height):
+			i = len(newdata)
+			print "y, i"
+			print y
+			print i
+			newdata += chunkData[i]
+			print "newdata: %d" % len(newdata)
+			#print newdata
+			for x in xrange(width):
 				i = len(newdata)
-				print "y, i"
-				print y
+				print x
 				print i
-				newdata += chunkData[i]
-				print "newdata: %d" % len(newdata)
-				#print newdata
-				for x in xrange(width):
-					i = len(newdata)
-					print x
-					print i
-					newdata += chunkData[i+2]
-					newdata += chunkData[i+1]
-					newdata += chunkData[i+0]
-					newdata += chunkData[i+3]
+				newdata += chunkData[i+2]
+				newdata += chunkData[i+1]
+				newdata += chunkData[i+0]
+				newdata += chunkData[i+3]
 
             # Compressing the image chunk
             chunkData = newdata
+            file = open("newdata", "wb")
+            file.write(chunkData)
+            file.close()
             chunkData = compress( chunkData )
+            file = open("compress", "wb")
+            file.write(chunkData)
+            file.close()
+
             chunkLength = len( chunkData )
             chunkCRC = crc32(chunkType)
             print "chunkCRC"
             print chunkCRC
+			
             chunkCRC = crc32(chunkData, chunkCRC)
             print chunkCRC
+            
             chunkCRC = (chunkCRC + 0x100000000) % 0x100000000
             print chunkCRC
+  
+            
+
+            
 
         # Removing CgBI chunk        
         if chunkType != "CgBI":
