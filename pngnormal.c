@@ -22,22 +22,23 @@ unsigned short pngheader[8]={0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A};
 
 //static PyObject *
 //PyZlib_compress(PyObject *self, PyObject *args)
-char *compress_own(char *data, int *output_len)
+char *compress_own(char *data, int *output_len, int input_len)
 {
     //PyObject *ReturnVal = NULL;
-    Byte *input, *output;
+    char *input, *output;
     int length, level=Z_DEFAULT_COMPRESSION, err;
     z_stream zst;
 
     /* require Python string object, optional 'level' arg */
     /*if (!PyArg_ParseTuple(args, "s#|i:compress", &input, &length, &level))
         return NULL;*/
-	length = 20000;
+	//level = 6;
+	length = input_len;
 	input = data;
     zst.avail_out = length + length/1000 + 12 + 1;
 
 	printf("zst.avail_out=%d\n", zst.avail_out);
-    output = (Byte*)malloc(zst.avail_out);
+    output = (char*)malloc(zst.avail_out);
     if (output == NULL) {
         //PyErr_SetString(PyExc_MemoryError,
         printf("Can't allocate memory to compress data\n");
@@ -47,8 +48,10 @@ char *compress_own(char *data, int *output_len)
     /* Past the point of no return.  From here on out, we need to make sure
        we clean up mallocs & INCREFs. */
 
-    zst.zalloc = (alloc_func)NULL;
-    zst.zfree = (free_func)Z_NULL;
+    //zst.zalloc = (alloc_func)NULL;
+    //zst.zfree = (free_func)Z_NULL;
+    zst.zalloc = NULL;
+    zst.zfree = Z_NULL;
     zst.next_out = (Byte *)output;
     zst.next_in = (Byte *)input;
     zst.avail_in = length;
@@ -88,8 +91,9 @@ char *compress_own(char *data, int *output_len)
     {    //ReturnVal = PyString_FromStringAndSize((char *)output,
         //                                       zst.total_out);
         *output_len = zst.total_out;
-        return zst.next_out;
-	}
+        //return zst.next_out;
+	return output;
+    }
     else
 		printf("while finishing compression\n");
         //zlib_error(zst, err, "while finishing compression");
@@ -395,12 +399,22 @@ int pngnormal(long int size)
 			int output_len = -1;
 			
 			printf("bufsize=%d\n", bufsize);
-			tmp = compress_own(newdata, &output_len);
+			tmp = compress_own(newdata, &output_len, bufsize);
 			
+			compressed_data = (char *)malloc(output_len+1);
+			memset(compressed_data, 0, output_len+1);
+			/*char buf[50*1024];
+			memset(buf, 0, 50*1024);
+			output_len = 50*1024;
+			printf("newdata=%p, bufsize=%d, buf=%p, output_len=%d\n", newdata, bufsize, buf, output_len);
+			int ret = compress(buf, &output_len,newdata, bufsize);
+			printf("ret=%d, output_len=%d\n", ret, output_len);*/
 			compressed_data = (char *)malloc(output_len+1);
 			memset(compressed_data, 0, output_len+1);
 			memcpy(compressed_data, tmp, output_len);
 			
+			memset(chunkData, 0, chunkLength);
+			memcpy(chunkData, compressed_data, output_len);
 			chunkLength = output_len;
 			chunkCRC = crc32(0, chunkType, 4);
 			chunkCRC = crc32(chunkCRC, compressed_data, output_len);
