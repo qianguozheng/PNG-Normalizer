@@ -7,6 +7,8 @@
 
 char oldpng[50*1024]; //50KB
 char newpng[50*1024]; //50KB
+char pendingIDATChunk[50*1024];
+int pendingLength = 0;
 
 //png is big-endian byte-orlder
 //unsigned short pngheader[8]={0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A};
@@ -114,6 +116,7 @@ PyDoc_STRVAR(decompress__doc__,
 
 //static PyObject *
 //PyZlib_decompress(PyObject *self, PyObject *args)
+int global_decompress_err = 0;
 char *decompress(char *compressed, int wsize, int input_len, int bufsize)
 {
 	printf("wsize=%d, input_len=%d, bufsize=%d\n", wsize, input_len, bufsize);
@@ -210,6 +213,8 @@ char *decompress(char *compressed, int wsize, int input_len, int bufsize)
     }
 
     //_PyString_Resize(&result_str, zst.total_out);
+    global_decompress_err = err;
+    printf("decompress done!\n");
     return result_str;
 
  error:
@@ -347,11 +352,53 @@ int pngnormal(long int size)
 		{
 			printf("This is IDAT chunk\n");
 			bufsize = width * height * 4 + height;
-			char *decompressed_data = (char *)malloc(bufsize+1);
+			char *decompressed_data = (char *)malloc(bufsize+1), *dtmp = NULL;
 			memset(decompressed_data, 0, bufsize);
 			//FIXME: if the Image is right or decompress occurred error, what should we do?
-			memcpy(decompressed_data, decompress(chunkData, -8, chunkLength, bufsize), bufsize);
-			
+			if (-5 == global_decompress_err)
+			{
+				//one png file may have multiple IDAT chunks.
+				memcpy(pendingIDATChunk+pendingLength, chunkData, chunkLength);
+				pendingLength += chunkLength;
+				//write_png_data("chunkData2", chunkData, chunkLength);
+				//write_png_data("pendingIDATChunk", pendingIDATChunk, pendingLength);
+				dtmp = decompress(pendingIDATChunk, -8, pendingLength, bufsize);
+			}
+			else 
+			{
+				//write_png_data("chunkData", chunkData, chunkLength);
+				printf("decompress start at here\n");
+				dtmp = decompress(chunkData, -8, chunkLength, bufsize);
+				printf("decompress at here\n");
+			}
+			if (dtmp == NULL)
+			{
+				printf("Cannot decompress data, error=%d\n", global_decompress_err);
+				if (-3 == global_decompress_err)
+				{//image data not compressed.
+					goto NOT_COMPRESSED;
+				}
+				else if (-5 == global_decompress_err)
+				{
+					memcpy(pendingIDATChunk+pendingLength, chunkData, chunkLength);
+					pendingLength += chunkLength;
+					printf("pendingLength=%d\n", pendingLength);
+					if(chunkData)
+					{
+						free(chunkData);
+					}
+					continue;
+				}
+			}
+			else
+			{
+				memset(pendingIDATChunk, 0, sizeof(pendingIDATChunk));
+				pendingLength = 0;
+			}
+			printf("%d, decompressed_data=%p, dtmp=%p, bufsize=%d\n", __LINE__, decompressed_data, dtmp, bufsize);
+			int ret = 0;
+			ret = memcpy(decompressed_data, dtmp, bufsize);
+			printf("%d, ret=%d\n", __LINE__, ret);
 			//Swapping red & blue bytes for each pixel
 			newdata = (char *)malloc(bufsize+1);
 			int x, y, i, len_newdata = 0;
@@ -471,6 +518,7 @@ int pngnormal(long int size)
 		//break;
 	}
 	
+NOT_COMPRESSED:
 	write_png_data("test.png", newpng, total_len);
 	
 	return 0; 
