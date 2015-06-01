@@ -1,2 +1,16 @@
 Usage:
 ./pngnormalize logo.png
+
+How to Generate pngnormalize executable binary:
+	$cd pngnormalize
+	$make
+
+Introduction:
+	logo.png is the file got from IPA zip file.
+	logo-ok.png is normalized png file.
+	logo2.png is the same file as logo.png
+	ref folders have the python program to generate the normal png file.
+	
+	The theroy to file the find get the right png file back is :
+	the png in IPA file have been used pngcrush to process, we need to remove
+	CgBI chunk. and swaping the IDAT chunk's red & blue bytes for each pixel.
