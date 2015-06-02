@@ -214,7 +214,6 @@ char *decompress(char *compressed, int wsize, int input_len, int bufsize)
 
     //_PyString_Resize(&result_str, zst.total_out);
     global_decompress_err = err;
-    printf("decompress done!\n");
     return result_str;
 
  error:
@@ -241,7 +240,6 @@ static int write_png_data(const char *filename, const char *pngdata, uint32_t si
 			printf("written = size\n");
 			break;
 		}
-		//printf("amount=%ld\n", amount);
 	}
 	
 	fflush(fp);
@@ -325,13 +323,10 @@ int pngnormal(long int size)
 		chunkCRC = ntohl(chunkCRC);
 		
 		//Copy all the old data from oldpng to newpng
-		//memcpy(pnewpng, poldpng, chunkLength+12);
 		new_len += chunkLength + 12;
 		poldpng += chunkLength + 12;
 		
 		printf("new_len=%d\n", new_len);
-		//pnewpng += new_len;
-		
 		
 		//Parsing the header chunk [IHDR]
 		if (chunkType[0] == 'I' && chunkType[1] == 'H' &&
@@ -450,12 +445,7 @@ int pngnormal(long int size)
 			
 			compressed_data = (char *)malloc(output_len+1);
 			memset(compressed_data, 0, output_len+1);
-			/*char buf[50*1024];
-			memset(buf, 0, 50*1024);
-			output_len = 50*1024;
-			printf("newdata=%p, bufsize=%d, buf=%p, output_len=%d\n", newdata, bufsize, buf, output_len);
-			int ret = compress(buf, &output_len,newdata, bufsize);
-			printf("ret=%d, output_len=%d\n", ret, output_len);*/
+
 			compressed_data = (char *)malloc(output_len+1);
 			memset(compressed_data, 0, output_len+1);
 			memcpy(compressed_data, tmp, output_len);
@@ -494,8 +484,6 @@ int pngnormal(long int size)
 			total_len += chunkLength + 12;
 			
 			printf("total_len=%d\n", total_len);
-			//if (chunkData)
-				//free(chunkData);
 		}
 		//free data used in IDAT
 		if (compressed_data)
@@ -515,7 +503,6 @@ int pngnormal(long int size)
 			printf("This is IEND chunk\n");
 			break;
 		}
-		//break;
 	}
 	
 NOT_COMPRESSED:
@@ -542,16 +529,6 @@ long int readpng(char *filename)
 	memset(oldpng, 0, sizeof(oldpng));
 	memset(newpng, 0, sizeof(newpng));
 	
-	/*while((size = fread(oldpng, sizeof(oldpng), 1, fp)))
-	{
-		if (feof(fp))
-		{
-			printf("End OF FILE\n");
-			break;
-		}
-		printf("Something happened, cause the file not read correctly\n");
-	}*/
-	
 	while(!feof(fp))
 	{
 		size += fread(oldpng+size, 1, 1, fp);
@@ -571,9 +548,5 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 	
-	/*printf("unsigned short:%d\n" ,sizeof(unsigned short));
-	printf("short:%d\n" ,sizeof(short));
-	printf("int:%d\n" ,sizeof(int));
-	printf("char:%d\n" ,sizeof(char));*/
 	pngnormal(readpng(argv[1]));
 }
