@@ -1,3 +1,6 @@
+PNG-Normalize
+Used to normalize png image from iOS ipa package, which is compressed by pngcrush tool when generate ipa file by XCode.
+
 Usage:
 ./pngnormalize logo.png
 
